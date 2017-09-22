@@ -1,7 +1,7 @@
 import Data.List
 import Control.Monad
 
-data Cmd = Bool | List deriving Eq
+data Cmd = Bool | List
 
 readInput :: String -> Either Cmd (Cmd, Int)
 readInput "List"                         = Left List
@@ -25,9 +25,9 @@ loop pList input = let cmd = readInput input in
     case cmd of
         Left List  -> putStrLn (show pList) >> (getLine >>= loop pList)
         Right cmd' -> let output = makeOutput pList (snd cmd'); list = fst output in
-            if fst cmd' == List then
-                putStrLn (show list) >> (getLine >>= loop list)
-                else putStrLn (show (snd output)) >> (getLine >>= loop list)
+            case fst cmd' of
+                List -> putStrLn (show list) >> (getLine >>= loop list)
+                Bool -> putStrLn (show (snd output)) >> (getLine >>= loop list)
         any        -> error "The impossible happened"
 
 main = getLine >>= loop primeList
