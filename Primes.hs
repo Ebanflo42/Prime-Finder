@@ -1,33 +1,35 @@
-import Data.List
-import Control.Monad
 
-data Cmd = Bool | List
+data Output  = Bool | List
+data Command = Print Output | Calculate (Output, Int) | Fail
 
-readInput :: String -> Either Cmd (Cmd, Int)
-readInput "List"                         = Left List
-readInput ('L':'i':'s':'t':restOfString) = Right (List, read restOfString :: Int)
-readInput ('B':'o':'o':'l':restOfString) = Right (Bool, read restOfString :: Int)
-readInput any                            = error "Couldn't read input"
+readInput :: String -> Command
+readInput "List"                         = Print List
+readInput ('L':'i':'s':'t':restOfString) = Calculate (List, read restOfString :: Int)
+readInput ('B':'o':'o':'l':restOfString) = Calculate (Bool, read restOfString :: Int)
+readInput any                            = Fail
 
 primeList :: [Int]
 primeList = [7, 5, 3, 2]
 
-processList :: [Int] -> [Int] -> [Int]
-processList list []     = list
-processList list (x:xs) = if any (\n -> x `mod` n == 0) list then processList list xs
-    else processList (x : list) xs
+findFactors :: [Int] -> [Int] -> [Int]
+findFactors list []     = list
+findFactors list (x:xs) = 
+    if any (\n -> x `mod` n == 0) list then findFactors list xs
+    else findFactors (x : list) xs
 
-makeOutput :: [Int] -> Int -> ([Int], Bool)
-makeOutput list n = let first = head list in if n < first then (list, not (all (n/=) list))
-    else let result = processList list [first + 2..n] in (result, n == head result)
+findPrimes :: [Int] -> Int -> ([Int], Bool)
+findPrimes list n = 
+    let highestPrime = head list in 
+        if n < highestPrime then (list, not (all (n/=) list))
+        else let result = findFactors list [highestPrime + 2..n] in (result, n == head result)
 
-loop pList input = let cmd = readInput input in
-    case cmd of
-        Left List  -> putStrLn (show pList) >> (getLine >>= loop pList)
-        Right cmd' -> let output = makeOutput pList (snd cmd'); list = fst output in
-            case fst cmd' of
-                List -> putStrLn (show list) >> (getLine >>= loop list)
-                Bool -> putStrLn (show (snd output)) >> (getLine >>= loop list)
-        any        -> error "The impossible happened"
+loop pList input =
+    case readInput input of
+        Print List     -> putStrLn (show pList) >> (getLine >>= loop pList)
+        Calculate pair -> let result = findPrimes pList (snd pair); newList = fst result in
+            case fst pair of
+                List -> putStrLn (show newList) >> (getLine >>= loop newList)
+                Bool -> putStrLn (show (snd result)) >> (getLine >>= loop newList)
+        Fail           -> putStrLn "Unable to read input" >> (getLine >>= loop pList)
 
 main = getLine >>= loop primeList
