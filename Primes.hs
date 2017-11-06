@@ -1,4 +1,3 @@
---TODO: reverse all the elements in the prime list file and fix printing
 import Data.List
 
 data Output  = Bool | List
