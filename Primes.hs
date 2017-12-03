@@ -1,21 +1,27 @@
 import Data.List
 
 data Output  = Bool | List
-data Command a = Print Output | Calculate (Output, a) | Fail | Quit
+data Command a = Print Output | Calculate (Output, a) | Head (Maybe a) | Help | Fail | Quit
 
 --reads input if the user wants to use Integers
 readInputLong :: String -> Command Integer
-readInputLong "List"                         = Print List
-readInputLong ('L':'i':'s':'t':restOfString) = Calculate (List, read restOfString :: Integer)
-readInputLong ('B':'o':'o':'l':restOfString) = Calculate (Bool, read restOfString :: Integer)
+readInputLong "h"                            = Help
+readInputLong "list"                         = Print List
+readInputLong "head"                         = Head Nothing
+readInputLong ('h':'e':'a':'d':restOfString) = Head $ Just (read restOfString :: Integer)
+readInputLong ('l':'i':'s':'t':restOfString) = Calculate (List, read restOfString :: Integer)
+readInputLong ('b':'o':'o':'l':restOfString) = Calculate (Bool, read restOfString :: Integer)
 readInputLong "q"                            = Quit
 readInputLong any                            = Fail
 
 --reads input if the user wants to use Ints
 readInputShort :: String -> Command Int
-readInputShort "List"                         = Print List
-readInputShort ('L':'i':'s':'t':restOfString) = Calculate (List, read restOfString :: Int)
-readInputShort ('B':'o':'o':'l':restOfString) = Calculate (Bool, read restOfString :: Int)
+readInputShort "h"                            = Help
+readInputShort "list"                         = Print List
+readInputShort "head"                         = Head Nothing
+readInputShort ('h':'e':'a':'d':restOfString) = Head $ Just (read restOfString :: Int)
+readInputShort ('l':'i':'s':'t':restOfString) = Calculate (List, read restOfString :: Int)
+readInputShort ('b':'o':'o':'l':restOfString) = Calculate (Bool, read restOfString :: Int)
 readInputShort "q"                            = Quit
 readInputShort any                            = Fail
 
@@ -35,6 +41,8 @@ toStringLong index len list =
 
 --default primes
 pL = [7,5,3,2]
+
+helpMsg = "\"head\" will display the head (greatest element) of the current prime list.\nIf followed by a number greater than the current head then \"head\" will calulate a new prime list and print its head.\n\"list\" works the same way except it will print out the whole list.\n\"bool\" must be followed by a number and prints a boolean corresponding to whether or not the number is prime.\nq to quit, h for help."
 
 --first arg is the list of pre-existing primes
 --second arg is a list of numbers to be checked for factorability
@@ -57,11 +65,15 @@ determineResult list n =
 loopLong :: [Integer] -> String -> IO () 
 loopLong pList input =
     case readInputLong input of
+        Head Nothing   -> putStrLn (show $ head pList) >> (getLine >>= loopLong pList)
+        Head (Just n)  -> let newList = fst $ determineResult pList n in
+            (putStrLn $ show $ head newList) >> (getLine >>= loopLong newList)
         Print List     -> putStrLn (toStringLong 0 10 pList) >> (getLine >>= loopLong pList)
         Calculate pair -> let result = determineResult pList (snd pair); newList = fst result in
             case fst pair of
                 List -> putStrLn (toStringLong 0 10 newList) >> (getLine >>= loopLong newList)
                 Bool -> putStrLn (show $ snd result) >> (getLine >>= loopLong newList)
+        Help           -> (putStrLn helpMsg) >> (getLine >>= loopLong pList)
         Fail           -> putStrLn "Unable to read input." >> (getLine >>= loopLong pList)
         Quit           -> return ()
 
@@ -69,11 +81,15 @@ loopLong pList input =
 loopShort :: [Int] -> String -> IO () 
 loopShort pList input =
     case readInputShort input of
+        Head Nothing   -> putStrLn (show $ head pList) >> (getLine >>= loopShort pList)
+        Head (Just n)  -> let newList = fst $ determineResult pList n in
+            (putStrLn $ show $ head newList) >> (getLine >>= loopShort newList)
         Print List     -> putStrLn (toStringShort 0 10 pList) >> (getLine >>= loopShort pList)
         Calculate pair -> let result = determineResult pList (snd pair); newList = fst result in
             case fst pair of
                 List -> putStrLn (toStringShort 0 10 newList) >> (getLine >>= loopShort newList)
                 Bool -> putStrLn (show $ snd result) >> (getLine >>= loopShort newList)
+        Help           -> (putStrLn helpMsg) >> (getLine >>= loopShort pList)
         Fail           -> putStrLn "Unable to read input." >> (getLine >>= loopShort pList)
         Quit           -> return ()
 
@@ -96,7 +112,7 @@ requestListPreference = do
           >> requestListPreference
 
 main = do
-    putStrLn "q to quit"
+    putStrLn "q to quit, h for help."
     putStrLn "Would you like to use integers with unlimited storage? (y/n)"
     response <- getLine
     if response == "y" then do
@@ -106,4 +122,5 @@ main = do
         getLine >>= loopLong primeList
     else if response == "n" then requestListPreference
     else if response == "q" then return ()
+    else if response == "h" then putStrLn helpMsg >> main
     else putStrLn "Please give valid input." >> main
